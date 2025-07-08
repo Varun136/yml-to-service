@@ -1,4 +1,5 @@
 import yaml
+import uuid
 from fastapi import UploadFile, File, Form
 from fastapi import APIRouter
 from src.langgraph.agent import DeveloperAgent
@@ -15,7 +16,9 @@ async def uploadYML(
     file: UploadFile = File(None), 
     yaml_content: str = Form(None)
     ):
-    
+
+    session_id = str(uuid.uuid4())
+
     if not file and not yaml_content:
         return HTTPException(400, "NO_YAML")
     
@@ -32,8 +35,9 @@ async def uploadYML(
     validated_data = validator.validate(config_data)
     if validated_data.invalid:
         return HTTPException(400, validated_data.error_messages)
-
-    response = await agent.run(validated_data)
+    
+    service = config_data.get("project").get("service") or "flask"
+    response = await agent.run(service, session_id)
     agent_response = AgentResponse(messages=response)
 
     return {
